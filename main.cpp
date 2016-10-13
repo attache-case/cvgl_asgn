@@ -9,9 +9,22 @@ int init_state = 0;
 cv::Point clicked_pt = cv::Point(-1, -1);
 cv::Point2f srcPoint[4] = {cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1)};
 cv::Point2f dstPoint[4] = {cv::Point2f(50, 100), cv::Point2f(87, 250), cv::Point2f(437, 250),cv::Point2f(550, 100)};
+cv::Point key_area_outerPoints[12] = {cv::Point(50, 100), cv::Point(50, 150), cv::Point(62, 150), cv::Point(62, 200), cv::Point(87, 200), cv::Point(87, 250),
+                                      cv::Point(437, 250), cv::Point(437, 200), cv::Point(512, 200), cv::Point(512, 150), cv::Point(550, 150), cv::Point(550, 100)};
+cv::Mat key_area_mask(480, 640, CV_8UC1);
+cv::Point key_center[26] = {cv::Point(75, 125), cv::Point(125, 125), cv::Point(175, 125), cv::Point(225, 125), cv::Point(275, 125), cv::Point(325, 125), cv::Point(375, 125), cv::Point(425, 125), cv::Point(475, 125), cv::Point(525, 125),
+                            cv::Point(87, 175), cv::Point(137, 175), cv::Point(187, 175), cv::Point(237, 175), cv::Point(287, 175), cv::Point(337, 175), cv::Point(387, 175), cv::Point(437, 175), cv::Point(487, 175),
+                            cv::Point(112, 225), cv::Point(162, 225), cv::Point(212, 225), cv::Point(262, 225), cv::Point(312, 225), cv::Point(362, 225), cv::Point(412, 225)};
+int char2keypos[26] = {10, 23, 21, 12, 2, 13, 14, 15, 7, 16, 17, 18, 25, 24, 8, 9, 0, 3, 11, 4, 6, 22, 1, 20, 5, 19};
+int keypos2char[26] = {16, 22, 4, 17, 19, 24, 20, 8, 14, 15, 0, 18, 3, 5, 6, 7, 9, 10, 11, 25, 23, 2, 21, 1, 13, 12};
 
 void init_calibration(cv::Mat frame);
 void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix);
+
+void init() {
+    //make key_area_mask
+    cv::fillConvexPoly(key_area_mask, key_area_outerPoints, 12, cv::Scalar(255), CV_AA);
+}
 
 void on_mouse_init(int event, int x, int y, int flags, void *) {
     if(event == CV_EVENT_LBUTTONDOWN){
@@ -23,6 +36,8 @@ void on_mouse_init(int event, int x, int y, int flags, void *) {
 * main
 ***************************/
 int main(){
+    init();
+
     cv::VideoCapture cap(0);
     cv::namedWindow("initialization", 1);
     cv::setMouseCallback("initialization", on_mouse_init, 0);
@@ -102,6 +117,8 @@ void init_calibration(cv::Mat frame) {
 
 void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
     cv::Mat dst_img;
+    cv::Mat bg(480, 640, CV_8UC3);
+    cv::rectangle(bg, cv::Point(0, 0), cv::Point(640, 480), cv::Scalar::all(0), -1);
     cv::warpPerspective(frame, dst_img, perspective_matrix, frame.size(), cv::INTER_LINEAR);
 
     cv::line(frame, srcPoint[0], srcPoint[1], cv::Scalar(255,255,0), 2, CV_AA);
@@ -113,10 +130,22 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
     cv::line(frame, dstPoint[2], dstPoint[3], cv::Scalar(255,0,255), 2, CV_AA);
     cv::line(frame, dstPoint[3], dstPoint[0], cv::Scalar(255,0,255), 2, CV_AA);
 
+    for (int i = 0; i < 26; i++)
+    {
+        cv::line(dst_img, key_center[i] + cv::Point(-25, -25), key_center[i] + cv::Point(25, -25), cv::Scalar(0,255,255), 2, CV_AA);
+        cv::line(dst_img, key_center[i] + cv::Point(25, -25), key_center[i] + cv::Point(25, 25), cv::Scalar(0,255,255), 2, CV_AA);
+        cv::line(dst_img, key_center[i] + cv::Point(25, 25), key_center[i] + cv::Point(-25, 25), cv::Scalar(0,255,255), 2, CV_AA);
+        cv::line(dst_img, key_center[i] + cv::Point(-25, 25), key_center[i] + cv::Point(-25, -25), cv::Scalar(0,255,255), 2, CV_AA);
+    }
+
+    dst_img.copyTo(bg, key_area_mask);
+
     cv::namedWindow("src", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
+    cv::namedWindow("mask", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::namedWindow("dst", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::imshow("src", frame);
-    cv::imshow("dst", dst_img);
+    cv::imshow("mask", key_area_mask);
+    cv::imshow("dst", bg);
     int k = cv::waitKey(33);
     switch (k) {
         case 0x1b://esc

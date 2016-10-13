@@ -1,0 +1,18 @@
+{
+    "version": "0.1.0",
+    "command": "sh",
+    "args": ["-c"],
+    "isShellCommand": true,
+    "showOutput": "always",
+    "suppressTaskName": true,
+    "tasks": [
+        {
+            "taskName": "make",
+            "args": ["make"]
+        },
+        {
+            "taskName": "ls",
+            "args": ["ls"]
+        }
+    ]
+}
