@@ -1,6 +1,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <windows.h> //ONLY AVAILABLE ON WINDOWS SYSYEM
 #include <opencv2/opencv.hpp>
  
 //Global variables
@@ -142,6 +143,14 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
         cv::line(dst_img, key_center[i] + cv::Point(25, -25), key_center[i] + cv::Point(25, 25), cv::Scalar(0,255,255), 2, CV_AA);
         cv::line(dst_img, key_center[i] + cv::Point(25, 25), key_center[i] + cv::Point(-25, 25), cv::Scalar(0,255,255), 2, CV_AA);
         cv::line(dst_img, key_center[i] + cv::Point(-25, 25), key_center[i] + cv::Point(-25, -25), cv::Scalar(0,255,255), 2, CV_AA);
+    }
+
+    for (char c = 'A'; c <= 'Z'; c++)
+    {
+        if(GetAsyncKeyState(c) || GetAsyncKeyState(c+-'A'+'a'))
+        {
+            cv::rectangle(dst_img, key_center[char2keypos[c-'A']] + cv::Point(-25,-25), key_center[char2keypos[c-'A']] + cv::Point(25,25), cv::Scalar:all(255), -1);
+        }
     }
 
     //overlay realtime image to base image
