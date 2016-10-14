@@ -8,7 +8,7 @@
     "tasks": [
         {
             "taskName": "make",
-            "args": ["make"]
+            "args": ["make main"]
         },
         {
             "taskName": "ls",

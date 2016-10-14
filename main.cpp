@@ -12,6 +12,8 @@ cv::Point2f dstPoint[4] = {cv::Point2f(50, 100), cv::Point2f(87, 250), cv::Point
 cv::Point key_area_outerPoints[12] = {cv::Point(50, 100), cv::Point(50, 150), cv::Point(62, 150), cv::Point(62, 200), cv::Point(87, 200), cv::Point(87, 250),
                                       cv::Point(437, 250), cv::Point(437, 200), cv::Point(512, 200), cv::Point(512, 150), cv::Point(550, 150), cv::Point(550, 100)};
 cv::Mat key_area_mask(480, 640, CV_8UC1);
+cv::Mat caribrated_whole(480, 640, CV_8UC3);
+bool caribrated = false;
 cv::Point key_center[26] = {cv::Point(75, 125), cv::Point(125, 125), cv::Point(175, 125), cv::Point(225, 125), cv::Point(275, 125), cv::Point(325, 125), cv::Point(375, 125), cv::Point(425, 125), cv::Point(475, 125), cv::Point(525, 125),
                             cv::Point(87, 175), cv::Point(137, 175), cv::Point(187, 175), cv::Point(237, 175), cv::Point(287, 175), cv::Point(337, 175), cv::Point(387, 175), cv::Point(437, 175), cv::Point(487, 175),
                             cv::Point(112, 225), cv::Point(162, 225), cv::Point(212, 225), cv::Point(262, 225), cv::Point(312, 225), cv::Point(362, 225), cv::Point(412, 225)};
@@ -57,7 +59,10 @@ int main(){
                 init_calibration(frame);
                 if(init_state == 4){
                     perspective_matrix = cv::getPerspectiveTransform(srcPoint, dstPoint);
+                    //save base caribrated img
+                    cv::warpPerspective(frame, caribrated_whole, perspective_matrix, frame.size(), cv::INTER_LINEAR);
                     init_state = 0;
+                    caribrated = true;
                 }
                 break;
             case 1:
@@ -117,8 +122,9 @@ void init_calibration(cv::Mat frame) {
 
 void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
     cv::Mat dst_img;
-    cv::Mat bg(480, 640, CV_8UC3);
-    cv::rectangle(bg, cv::Point(0, 0), cv::Point(640, 480), cv::Scalar::all(0), -1);
+    cv::Mat bg(480, 640, CV_8UC3, cv::Scalar::all(0));
+    cv::Mat blended;
+
     cv::warpPerspective(frame, dst_img, perspective_matrix, frame.size(), cv::INTER_LINEAR);
 
     cv::line(frame, srcPoint[0], srcPoint[1], cv::Scalar(255,255,0), 2, CV_AA);
@@ -138,14 +144,19 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
         cv::line(dst_img, key_center[i] + cv::Point(-25, 25), key_center[i] + cv::Point(-25, -25), cv::Scalar(0,255,255), 2, CV_AA);
     }
 
+    //overlay realtime image to base image
+    cv::addWeighted(dst_img, 0.3, caribrated_whole, 0.7, 0.0, blended);
+
     dst_img.copyTo(bg, key_area_mask);
 
     cv::namedWindow("src", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::namedWindow("mask", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::namedWindow("dst", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
+    cv::namedWindow("blended", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::imshow("src", frame);
     cv::imshow("mask", key_area_mask);
     cv::imshow("dst", bg);
+    cv::imshow("blended", blended);
     int k = cv::waitKey(33);
     switch (k) {
         case 0x1b://esc
