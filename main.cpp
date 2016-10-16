@@ -39,6 +39,7 @@ void on_mouse_init(int event, int x, int y, int flags, void *) {
 * main
 ***************************/
 int main(){
+
     init();
 
     cv::VideoCapture cap(0);
@@ -100,6 +101,7 @@ void init_calibration(cv::Mat frame) {
     int k = cv::waitKey(33);
     switch (k) {
         case 10://ENTER
+		case 13://ENTER for Windows
             if( !(clicked_pt.x < 0 || clicked_pt.y < 0) ) {
                 srcPoint[init_state].x = clicked_pt.x;
                 srcPoint[init_state].y = clicked_pt.y;
@@ -149,7 +151,7 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
     {
         if(GetAsyncKeyState(c) || GetAsyncKeyState(c+-'A'+'a'))
         {
-            cv::rectangle(dst_img, key_center[char2keypos[c-'A']] + cv::Point(-25,-25), key_center[char2keypos[c-'A']] + cv::Point(25,25), cv::Scalar:all(255), -1);
+            cv::rectangle(dst_img, key_center[char2keypos[c-'A']] + cv::Point(-25,-25), key_center[char2keypos[c-'A']] + cv::Point(25,25), cv::Scalar::all(255), -1);
         }
     }
 
