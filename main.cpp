@@ -3,23 +3,26 @@
 #include <iostream>
 #include <windows.h> //ONLY AVAILABLE ON WINDOWS SYSYEM
 #include <opencv2/opencv.hpp>
- 
+
+#define NOTE_SPEED 1.0
+
 //Global variables
 int mode = 0;//control process in "main"
-int init_state = 0;
-cv::Point clicked_pt = cv::Point(-1, -1);
-cv::Point2f srcPoint[4] = {cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1)};
-cv::Point2f dstPoint[4] = {cv::Point2f(50, 100), cv::Point2f(87, 250), cv::Point2f(437, 250),cv::Point2f(550, 100)};
+int init_state = 0;//control state on intialization part
+cv::Point clicked_pt = cv::Point(-1, -1);//refresh when clicked
+cv::Point2f srcPoint[4] = {cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1), cv::Point2f(-1, -1)};//caribrate from
+cv::Point2f dstPoint[4] = {cv::Point2f(50, 100), cv::Point2f(87, 250), cv::Point2f(437, 250),cv::Point2f(550, 100)};//caribrate to
 cv::Point key_area_outerPoints[12] = {cv::Point(50, 100), cv::Point(50, 150), cv::Point(62, 150), cv::Point(62, 200), cv::Point(87, 200), cv::Point(87, 250),
-                                      cv::Point(437, 250), cv::Point(437, 200), cv::Point(512, 200), cv::Point(512, 150), cv::Point(550, 150), cv::Point(550, 100)};
-cv::Mat key_area_mask(480, 640, CV_8UC1);
-cv::Mat caribrated_whole(480, 640, CV_8UC3);
+                                      cv::Point(437, 250), cv::Point(437, 200), cv::Point(512, 200), cv::Point(512, 150), cv::Point(550, 150), cv::Point(550, 100)};//to cut out key board area
+cv::Mat key_area_mask(480, 640, CV_8UC1, cv::Scalar::all(0));//to keep key area mask
+cv::Mat caribrated_whole(480, 640, CV_8UC3);//to globaly use the caribrated image
 bool caribrated = false;
 cv::Point key_center[26] = {cv::Point(75, 125), cv::Point(125, 125), cv::Point(175, 125), cv::Point(225, 125), cv::Point(275, 125), cv::Point(325, 125), cv::Point(375, 125), cv::Point(425, 125), cv::Point(475, 125), cv::Point(525, 125),
                             cv::Point(87, 175), cv::Point(137, 175), cv::Point(187, 175), cv::Point(237, 175), cv::Point(287, 175), cv::Point(337, 175), cv::Point(387, 175), cv::Point(437, 175), cv::Point(487, 175),
-                            cv::Point(112, 225), cv::Point(162, 225), cv::Point(212, 225), cv::Point(262, 225), cv::Point(312, 225), cv::Point(362, 225), cv::Point(412, 225)};
-int char2keypos[26] = {10, 23, 21, 12, 2, 13, 14, 15, 7, 16, 17, 18, 25, 24, 8, 9, 0, 3, 11, 4, 6, 22, 1, 20, 5, 19};
-int keypos2char[26] = {16, 22, 4, 17, 19, 24, 20, 8, 14, 15, 0, 18, 3, 5, 6, 7, 9, 10, 11, 25, 23, 2, 21, 1, 13, 12};
+                            cv::Point(112, 225), cv::Point(162, 225), cv::Point(212, 225), cv::Point(262, 225), cv::Point(312, 225), cv::Point(362, 225), cv::Point(412, 225)};//caribrated center position ot the keys
+int char2keypos[26] = {10, 23, 21, 12, 2, 13, 14, 15, 7, 16, 17, 18, 25, 24, 8, 9, 0, 3, 11, 4, 6, 22, 1, 20, 5, 19};//convert key-name to key-pos
+int keypos2char[26] = {16, 22, 4, 17, 19, 24, 20, 8, 14, 15, 0, 18, 3, 5, 6, 7, 9, 10, 11, 25, 23, 2, 21, 1, 13, 12};//convert key-pos to key-name
+bool key_pressed[26] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
 
 void init_calibration(cv::Mat frame);
 void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix);
@@ -30,6 +33,7 @@ void init() {
 }
 
 void on_mouse_init(int event, int x, int y, int flags, void *) {
+	//keep clicked point to global variable
     if(event == CV_EVENT_LBUTTONDOWN){
         clicked_pt = cv::Point(x, y);
     }
@@ -42,7 +46,7 @@ int main(){
 
     init();
 
-    cv::VideoCapture cap(0);
+    cv::VideoCapture cap(2);
     cv::namedWindow("initialization", 1);
     cv::setMouseCallback("initialization", on_mouse_init, 0);
     cv::Mat perspective_matrix;
@@ -110,6 +114,11 @@ void init_calibration(cv::Mat frame) {
                     init_state++;
                 } else {//init_state == 3
                     cv::destroyWindow("initialization");
+					//prepare window for caribration check
+					cv::namedWindow("src", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+					cv::namedWindow("mask", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+					cv::namedWindow("dst", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+					cv::namedWindow("blended", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
                     init_state = 4;
                     mode = 1;//end initialization
                 }
@@ -139,6 +148,8 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
     cv::line(frame, dstPoint[2], dstPoint[3], cv::Scalar(255,0,255), 2, CV_AA);
     cv::line(frame, dstPoint[3], dstPoint[0], cv::Scalar(255,0,255), 2, CV_AA);
 
+	//show key frame for test
+	/*
     for (int i = 0; i < 26; i++)
     {
         cv::line(dst_img, key_center[i] + cv::Point(-25, -25), key_center[i] + cv::Point(25, -25), cv::Scalar(0,255,255), 2, CV_AA);
@@ -146,28 +157,26 @@ void show_caribrated_image(cv::Mat frame, cv::Mat perspective_matrix){
         cv::line(dst_img, key_center[i] + cv::Point(25, 25), key_center[i] + cv::Point(-25, 25), cv::Scalar(0,255,255), 2, CV_AA);
         cv::line(dst_img, key_center[i] + cv::Point(-25, 25), key_center[i] + cv::Point(-25, -25), cv::Scalar(0,255,255), 2, CV_AA);
     }
+	*/
 
     for (char c = 'A'; c <= 'Z'; c++)
     {
         if(GetAsyncKeyState(c) || GetAsyncKeyState(c+-'A'+'a'))
         {
+			//shine pressed key
             cv::rectangle(dst_img, key_center[char2keypos[c-'A']] + cv::Point(-25,-25), key_center[char2keypos[c-'A']] + cv::Point(25,25), cv::Scalar::all(255), -1);
         }
     }
 
+	caribrated_whole.copyTo(bg, key_area_mask);
+
     //overlay realtime image to base image
-    cv::addWeighted(dst_img, 0.3, caribrated_whole, 0.7, 0.0, blended);
+    cv::addWeighted(dst_img, 0.3, bg, 0.7, 0.0, blended);
 
-    dst_img.copyTo(bg, key_area_mask);
-
-    cv::namedWindow("src", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
-    cv::namedWindow("mask", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
-    cv::namedWindow("dst", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
-    cv::namedWindow("blended", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
     cv::imshow("src", frame);
     cv::imshow("mask", key_area_mask);
     cv::imshow("dst", bg);
-    cv::imshow("blended", blended);
+    cv::imshow("blended", blended);//for main use
     int k = cv::waitKey(33);
     switch (k) {
         case 0x1b://esc
